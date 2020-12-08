@@ -1,23 +1,34 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"encoding/json"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 )
 
 func initDB() *sqlx.DB {
-	// db, err := sqlx.Open("mysql", "root@/practice")
-	db, err := sqlx.Connect("mysql", "root@tcp(127.0.0.1:3306)/practice")
+	err := godotenv.Load(fmt.Sprintf("./%s.env", os.Getenv("GO_ENV")))
 	if err != nil {
 		log.Fatal(err)
 	}
-	db.Exec("USE practice")
+
+	name := os.Getenv("DB_NAME")
+	user := os.Getenv("DB_USER")
+	pass := os.Getenv("DB_PASS")
+
+	dns := fmt.Sprintf(user + ":" + pass + "@tcp(127.0.0.1:3306)/" + name)
+	db, err := sqlx.Connect("mysql", dns)
+	if err != nil {
+		log.Fatal(err)
+	}
 	return db
 }
 
@@ -31,14 +42,13 @@ CREATE TABLE login_log(
 
 // LogData is db data
 type LogData struct {
-	ID    int `db:"id" json:"money"`
+	ID    int `db:"id" json:"id"`
 	Money int `db:"money" json:"money"`
 }
 
 func main() {
 	e := echo.New()
 	db := initDB()
-	// db.MustExec(schema)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"hello": "world"})
@@ -46,7 +56,7 @@ func main() {
 
 	e.GET("/data", func(c echo.Context) error {
 		tx := db.MustBegin()
-		tx.NamedExec("INSERT INTO login_log (money) VALUES(:money)", LogData{0, 100})
+		tx.NamedExec("INSERT INTO login_log (money) VALUES(:money)", LogData{0, 130})
 		tx.Commit()
 		return c.JSON(http.StatusOK, map[string]string{"hello": "ok"})
 	})
